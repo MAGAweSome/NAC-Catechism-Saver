@@ -12,7 +12,6 @@ def create_directories_if_not_exist(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-
 # Function to determine the appropriate numbering format
 def get_numbering_format(link):
     # Define global variables
@@ -28,6 +27,7 @@ def get_numbering_format(link):
         current_leading_number += 1  # Use += to increment
         return numbering_format
     
+# This will create Html files also
 def create_html_files():
     # Create a new HTML file within the Catechism directory
     html_file_path = os.path.join(base_directory, f"{file_name}.html")
@@ -36,11 +36,15 @@ def create_html_files():
             f"<!DOCTYPE html>\n<html>\n<head>\n<title>{link}</title>\n</head>\n<body>\n{content}\n</body>\n</html>"
         )
 
-
 # Defining a variable to see if the leading number after introductiuon hhas been triggered yet
 leading_number_content = False
 current_leading_number = 1
 user_would_like_html = False
+
+# Check if the 'Catechism' folder exists
+if not os.path.exists('Catechism'):
+    # If it doesn't exist, create the folder
+    os.makedirs('Catechism')
 
 print("Hello, Welcome to The Catechism to mp3 builder.")
 print("This script will create an html file and an mp3 of every sector of the Catechism.")
@@ -94,6 +98,7 @@ if response.status_code == 200:
         # exclude_items = ["Content", "Glossary", "Index", "Index of Bible references"]
         exclude_items = []
 
+        # Ask the user what they would not like downloaded part from the content links
         while True:
             exclusion = input(
                 "What would you like to exclude? \nThe best may be to copy and paste from the content page as this will need to be an exact match. \nAlso, this will require one entry at a time, for example, if you dont want 1.1.1 God reveals Himself as the Creator, type that then press enter and add the next entry \nEnter 'Done' when finished: "
@@ -103,6 +108,7 @@ if response.status_code == 200:
             else:
                 exclude_items.append(exclusion)
 
+        # Show the current excluded items and makre sure thats what the user wants
         while True:
             if exclude_items:
                 print("Excluded items:", exclude_items)
@@ -125,6 +131,7 @@ if response.status_code == 200:
             else:
                 print("Invalid input. Please enter 'Yes' or 'No'.")
 
+        # Ask if the user wants the html files also
         while True:
             confirm = input("Would you also like html files? (Yes/No): ").lower()
             if confirm == "yes" or confirm == "no":
