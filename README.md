@@ -1,8 +1,6 @@
 # NAC Catechism Saver
 This is a python script that will download the catechism as separate mp3's
 
-Here is what you need:
-
 ### Step-by-Step Guide to Running Python Code on Windows
 
 #### Step 1: Install Python
