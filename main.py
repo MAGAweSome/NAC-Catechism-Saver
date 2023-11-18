@@ -4,6 +4,10 @@ from gtts import gTTS
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from alive_progress import alive_bar
+
 import os
 
 
@@ -47,14 +51,16 @@ if not os.path.exists('Catechism'):
     os.makedirs('Catechism')
 
 print("Hello, Welcome to The Catechism to mp3 builder.")
-print("This script will create an html file and an mp3 of every sector of the Catechism.")
+print("This script will create an html file and a mp3 of every section of the Catechism.")
 
 # Setting up Chrome options for headless mode
 chrome_options = Options()
 chrome_options.add_argument("--headless")  # Runs Chrome in headless mode
 
 # Create a WebDriver instance for headless Chrome
-driver = webdriver.Chrome(options=chrome_options)
+#driver = webdriver.Chrome(options=chrome_options)
+service = Service(executable_path=ChromeDriverManager().install())
+driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # URL of the webpage to scrape
 url = "https://nak.org/en/abouttheNAC/catechism?id=toc"
@@ -100,13 +106,23 @@ if response.status_code == 200:
 
         # Ask the user what they would not like downloaded part from the content links
         while True:
-            exclusion = input(
-                "What would you like to exclude? \nThe best may be to copy and paste from the content page as this will need to be an exact match. \nAlso, this will require one entry at a time, for example, if you dont want 1.1.1 God reveals Himself as the Creator, type that then press enter and add the next entry \nEnter 'Done' when finished: "
-            )
-            if exclusion.lower() == "done":
+            confirm = input("Would you like to exclude any parts of the Catechism? (Yes/No): ").lower()
+            if confirm == "yes":
+                print("To exclude a section, please copy and paste the exact heading from the content page. \nYou will need to enter one heading at a time. For example, if you don’t want to include “1.1.1 God reveals Himself as the Creator”, type that heading and press enter.\nThen, add the next heading you want to exclude.")
+                while True:
+                    exclusion = input(
+                        "What would you like to exclude? Enter 'Done' when finished: "
+                    )
+                    if exclusion.lower() == "done":
+                        break
+                    else:
+                        exclude_items.append(exclusion)
+                break
+            elif confirm == "no":
+                exclude_items = []
                 break
             else:
-                exclude_items.append(exclusion)
+                print("Invalid input. Please enter 'Yes' or 'No'.")     
 
         # Show the current excluded items and makre sure thats what the user wants
         while True:
@@ -151,74 +167,78 @@ if response.status_code == 200:
         # Setting the base directory for where the links and html will be stored
         base_directory = "Catechism"
 
-        for link in content_links:
-            # Get the appropriate leading number for the current link
-            if not link[0].isdigit():
-                numbering_format = get_numbering_format(link)
-            else:
-                leading_number_content = True
-                current_leading_number = 1
-
-            # Make the html file for the given link
-            try:
-                # Find the link element by its text ("Introduction")
-                intro_link = driver.find_element(By.LINK_TEXT, link)
-
-                # Click the "Introduction" link
-                intro_link.click()
-
-                # Get the page source after clicking the "Introduction" link
-                page_source = driver.page_source
-
-                # Parsing the webpage content using BeautifulSoup
-                soup = BeautifulSoup(page_source, "html.parser")
-
-                # Finding all divs with class "padder"
-                all_padder_divs = soup.find_all("div", class_="padder")
-
-                # Checking if the third "padder" div is available
-                if len(all_padder_divs) >= 3:
-
-                    third_padder_div = all_padder_divs[
-                        2
-                    ]  # Selecting the third div from the list (index 2)
-
-                    # Get the HTML representation of the third "padder" div
-                    content = third_padder_div.prettify()
-
-                    # This will make the file name for saving purposes
-                    if not link[0].isdigit():
-                        # If the file name doesn't not already have a leading digit, add one
-                        file_name = f"{numbering_format}{link}"
-                    else:
-                        # If the file name already has a leading digit, don't add one
-                        file_name = f"{link}"
-                    
-                    if user_would_like_html:
-                        create_html_files()
-
-                    # Make a variable called text_to_convert, This will grab all the text on the desired webpage that
-                    # will be translated into mp3
-
-                    # Extracting all text content within the third "padder" div
-                    text_to_convert = third_padder_div.get_text()
-
-                    # Converting extracted text to speech
-                    tts = gTTS(text=text_to_convert, lang="en")
-
-                    # Saving the audio file within the Catechism directory
-                    audio_file_path = os.path.join(base_directory, f"{file_name}.mp3")
-                    tts.save(audio_file_path)
+        with alive_bar(len(content_links)) as bar:
+            for link in content_links:
+                # Get the appropriate leading number for the current link
+                if not link[0].isdigit():
+                    numbering_format = get_numbering_format(link)
                 else:
-                    print(
-                        f'The third div with class "padder" was not found on the {link} webpage.'
-                    )
+                    leading_number_content = True
+                    current_leading_number = 1
 
-            except Exception as e:
-                print(f"An error occurred: {e}")
+                # Make the html file for the given link
+                try:
+                    # Find the link element by its text ("Introduction")
+                    intro_link = driver.find_element(By.LINK_TEXT, link)
 
-            # Navigate back to the previous page before the next iteration
-            driver.back()
+                    # Click the "Introduction" link
+                    intro_link.click()
+
+                    # Get the page source after clicking the "Introduction" link
+                    page_source = driver.page_source
+
+                    # Parsing the webpage content using BeautifulSoup
+                    soup = BeautifulSoup(page_source, "html.parser")
+
+                    # Finding all divs with class "padder"
+                    all_padder_divs = soup.find_all("div", class_="padder")
+
+                    # Checking if the third "padder" div is available
+                    if len(all_padder_divs) >= 3:
+
+                        third_padder_div = all_padder_divs[
+                            2
+                        ]  # Selecting the third div from the list (index 2)
+
+                        # Get the HTML representation of the third "padder" div
+                        content = third_padder_div.prettify()
+
+                        # This will make the file name for saving purposes
+                        if not link[0].isdigit():
+                            # If the file name doesn't not already have a leading digit, add one
+                            file_name = f"{numbering_format}{link}"
+                        else:
+                            # If the file name already has a leading digit, don't add one
+                            file_name = f"{link}"
+                        
+                        if user_would_like_html:
+                            create_html_files()
+
+                        # Make a variable called text_to_convert, This will grab all the text on the desired webpage that
+                        # will be translated into mp3
+
+                        # Extracting all text content within the third "padder" div
+                        text_to_convert = third_padder_div.get_text()
+
+                        # Converting extracted text to speech
+                        tts = gTTS(text=text_to_convert, lang="en")
+
+                        # Saving the audio file within the Catechism directory
+                        audio_file_path = os.path.join(base_directory, f"{file_name}.mp3")
+                        tts.save(audio_file_path)
+                    else:
+                        print(
+                            f'The third div with class "padder" was not found on the {link} webpage.'
+                        )
+
+                except Exception as e:
+                    print(f"An error occurred: {e}")
+
+                # Navigate back to the previous page before the next iteration
+                driver.back()
+                #update progress bar
+                bar()
+
 
         # Close the browser
         driver.quit()
